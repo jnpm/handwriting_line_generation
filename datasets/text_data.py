@@ -2,25 +2,28 @@ import random,re
 import json
 import torch
 import numpy as np
+import spacy
 from utils import string_utils
 class TextData():
     def __init__(self, textfile = 'data/lotr.txt', char_set_path='', batch_size=1, max_len=20, words=False, characterBalance=False,hardsplit_newline=False):
+        nlp = spacy.load("en_core_web_sm", exclude=["parser"])
+        config = {"punct_chars": ["\n"]}
+        nlp.add_pipe("sentencizer", config=config)
         self.max_len=max_len
         self.characterBalance=characterBalance
         if characterBalance:
             self.chars=[c for c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ']
 
-
-        #with open(os.path.join(dirPath,'sets.json')) as f:
+        # with open(os.path.join(dirPath,'sets.json')) as f:
         with open(textfile) as f:
             text = f.read()
-        #text = text.replace('\n', ' ')#.replace('  ',' ')
+        # text = text.replace('\n', ' ')#.replace('  ',' ')
         if hardsplit_newline:
             self.text = text.split('\n')
             self.words=True
         else:
-            text=re.sub('\s+',' ',text) #This takes a minute on large text, but only needs done once.
-            self.text=text
+            # text=re.sub('\s+',' ',text) #This takes a minute on large text, but only needs done once.
+            self.text = nlp(text)
             self.words=words
 
             if words:
@@ -30,6 +33,7 @@ class TextData():
                     m = re.match(r'[.,:\'"?!]*',word)
                     if m is None or m.span()[0]!=0 or m.span()[1]<len(word):
                         self.text.append(word)
+
         if len(char_set_path)>0:
             with open(char_set_path) as f: 
                 char_set = json.load(f) 
@@ -48,7 +52,6 @@ class TextData():
         label_lengths = []
         gt=[]
 
-        
         for i in range(self.batch_size):
             if self.words:
                 idx=np.random.randint(0,len(self.text))
@@ -73,11 +76,10 @@ class TextData():
                             flipped=True
                             idx=0
                         if flipped and idx>=startIdx:
-                            #this char is not in the text set, so we'll just add it somewhere random
+                            # this char is not in the text set, so we'll just add it somewhere random
                             r=random.randint(0,len(text))
                             text=text[:r]+goalChar+text[r+1:]
                             break
-
 
                 else:
                     text =  self.text[idx:idx+length]
@@ -91,7 +93,7 @@ class TextData():
                 label_lengths.append(len(l))
 
         if self.char_to_idx is not None:
-            #all_labels = np.concatenate(all_labels)
+            # all_labels = np.concatenate(all_labels)
             label_lengths = torch.IntTensor(label_lengths)
             max_len = label_lengths.max()
             all_labels = [np.pad(l,((0,max_len-l.shape[0]),),'constant') for l in all_labels]

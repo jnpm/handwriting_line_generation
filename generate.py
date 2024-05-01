@@ -7,10 +7,10 @@ from model import *
 from model.metric import *
 from model.loss import *
 from logger import Logger
-#from trainer import *
-#from data_loader import getDataLoader
+# from trainer import *
+# from data_loader import getDataLoader
 from datasets.text_data import TextData
-#from evaluators import *
+# from evaluators import *
 import math
 from collections import defaultdict
 import pickle
@@ -20,8 +20,8 @@ from utils import string_utils
 from utils.util import ensure_dir
 import random, re, csv
 
-#from datasets.forms_detect import FormsDetect
-#from datasets import forms_detect
+# from datasets.forms_detect import FormsDetect
+# from datasets import forms_detect
 
 logging.basicConfig(level=logging.INFO, format='')
 
@@ -182,7 +182,6 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     valid_data_loader = test_data_loader
 
             return valid_test_loader
-    
 
     if checkpoint is not None:
         if 'state_dict' in checkpoint:
@@ -193,7 +192,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
     else:
         model = eval(config['arch'])(config['model'])
     model.eval()
-    #model.summary()
+    # model.summary()
     if gpu is not None:
         model = model.to(gpu)
     model.count_std=0
@@ -208,17 +207,16 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
         char_set = json.load(f)
     char_to_idx = char_set['char_to_idx']
 
-
     by_author_styles=defaultdict(list)
     by_author_all_ids=defaultdict(set)
-    #style_loc = config['style_loc'] if 'style_loc' in config else style_loc
+    # style_loc = config['style_loc'] if 'style_loc' in config else style_loc
     if style_loc is not None:
         if style_loc[-1]!='*':
             style_loc+='*'
         all_style_files = glob(style_loc)
         assert( len(all_style_files)>0)
         for loc in all_style_files:
-            #print('loading '+loc)
+            # print('loading '+loc)
             with open(loc,'rb') as f:
                 styles = pickle.load(f)
             if 'ids' in styles:
@@ -233,7 +231,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
         authors=set()
         for author in by_author_styles:
             for style, ids in by_author_styles[author]:
-                    styles[author].append(style)
+                styles[author].append(style)
             if len(styles[author])>0:
                 authors.add(author)
         authors=list(authors)
@@ -331,7 +329,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     stylesL=[torch.FloatTensor(1,model.style_dim).normal_() for i in range(num_styles)]
                 images=[]
                 styles=[]
-                #step=0.05
+                # step=0.05
                 for i in range(num_styles-1):
                     b_im, b_sty = interpolate(model,stylesL[i].to(gpu),stylesL[i+1].to(gpu), text,char_to_idx,gpu,step)
                     images+=b_im
@@ -348,10 +346,10 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                             genStep[:,0]=0
                             genStep[:,-1]=0
                         path = os.path.join(saveDir,'gen{}_{}.png'.format(b,i))
-                        #print('wrote: {}'.format(path))
+                        # print('wrote: {}'.format(path))
                         cv2.imwrite(path,genStep)
                     torch.save(styles, os.path.join(saveDir,'styles{}.pth'.format(b)))
-            
+
             elif action[0]=='R': #Just random (interpolated) styles, with option for random text
                 assert(styles is not None and 'perhaps you forgot to set "-s path/to/styles.pkl"?')
                 num_inst = int(input('num to gen? '))
@@ -371,29 +369,29 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     for i in range(index_offset):
                         text = textList[i]
                 elif text.endswith('.txt'):
-                    textData = TextData(batch_size=num_inst,max_len=55,textfile=text)
-                    textList = textData.getInstance()['gt']
+                    textList = TextData(batch_size=num_inst,max_len=400,textfile=text)
+                    # textList = textData.getInstance()['gt']
                     text=None
                 else:
                     textList=None
 
-                #sample the styles
+                # sample the styles
                 stylesL=[]
                 textL=[]
                 text_falseL=[]
                 ensure_dir(os.path.join(saveDir))#,'fake'))
                 for i in range(num_inst):
                     if not model.vae:
-                        #authorA = random.choice(get_authors())
+                        # authorA = random.choice(get_authors())
                         authorA = random.choice(list(styles.keys()))
                         instance = random.randint(0,len(styles[authorA])-1)
                         style1 = styles[authorA][instance]
-                        #authorB = random.choice(get_authors())
+                        # authorB = random.choice(get_authors())
                         authorB = random.choice(list(styles.keys()))
                         instance = random.randint(0,len(styles[authorB])-1)
                         style2 = styles[authorB][instance]
 
-                        #inter = random.random()
+                        # inter = random.random()
                         inter = 2*random.random()-0.5
                         if charSpec:
                             style = (
@@ -404,10 +402,10 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                         else:
                             style = style1*inter + style2*(1-inter)
 
-                        #stylesL.append(style)
+                        # stylesL.append(style)
                     else: #VAE
                         stylesL=[torch.FloatTensor(1,model.style_dim).normal_() for i in range(num_styles)]
-                    #for i,style in enumerate(stylesL):
+                    # for i,style in enumerate(stylesL):
                     if charSpec:
                         if gpu is not None:
                             style = (torch.from_numpy(style[0])[None,...].to(gpu),torch.from_numpy(style[1][None,...]).to(gpu),torch.from_numpy(style[2][None,...]).to(gpu))
@@ -421,16 +419,53 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                         style = style[None,...]
 
                     if textList is not None:
-                        text = textList[i]
-                    im = generate(model,style,text,char_to_idx,gpu)
-                    im = ((1-im[0].permute(1,2,0))*127.5).cpu().numpy().astype(np.uint8)
-                    image_name = 'sample_{}.png'.format(i+index_offset)
-                    path = os.path.join(saveDir,image_name)
-                    cv2.imwrite(path,im)
-                    if textList is not None:
-                        with open('OUT.txt','a') as out:
-                            out.write('{}:'.format(i+index_offset)+text+'\n')
+                        canvas = np.full((3508, 2480, 1), 255)
+                        page = 0
+                        filled_height = 0
+                        for sentence in textList.text.sents:
+                            if filled_height > canvas.shape[0]:
+                                image_name = f"page_{page}.png"
+                                path = os.path.join(saveDir, image_name)
 
+                                cv2.imwrite(path, canvas)
+                                page += 1
+                                filled_height = 0
+                                canvas = np.full((3508, 2480, 1), 255)
+                            im = generate(
+                                model, style, sentence.text.strip(), char_to_idx, gpu
+                            )
+                            im = (
+                                ((1 - im[0].permute(1, 2, 0)) * 127.5)
+                                .cpu()
+                                .numpy()
+                                .astype(np.uint8)
+                            )
+                            canvas[
+                                filled_height : filled_height + im.shape[0], : im.shape[1]
+                            ] = im
+                            filled_height += im.shape[0]
+                        image_name = f"page_{page}.png"
+                        path = os.path.join(saveDir, image_name)
+                        cv2.imwrite(path, canvas)
+                    else:
+                        im = generate(model,style,text,char_to_idx,gpu)
+                        im = ((1-im[0].permute(1,2,0))*127.5).cpu().numpy().astype(np.uint8)
+                        # im1 = (
+                        #     (
+                        #         (1 - torch.cat((im[0], im[0]), dim=1).permute(1, 2, 0))
+                        #         * 127.5
+                        #     )
+                        #     .cpu()
+                        #     .numpy()
+                        #     .astype(np.uint8)
+                        # )
+                        # canvas[: im1.shape[0], : im1.shape[1]] = im1
+                        image_name = 'sample_{}.png'.format(i+index_offset)
+                        path = os.path.join(saveDir,image_name)
+                        cv2.imwrite(path,im)
+                        if textList is not None:
+                            with open('OUT.txt','a') as out:
+                                out.write('{}:'.format(i+index_offset)+text+'\n')
 
             elif action[0]=='m': #style vector math, this is broken
                 assert(styles is not None and 'perhaps you forgot to set "-s path/to/styles.pkl"?')
@@ -441,7 +476,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 print('elements of expression: author_id,+,-,[author_id')
                 expression = input('expression? ')
                 idx=0
-                #style=torch.FloatTensor(1,model.style_dim).zero_()
+                # style=torch.FloatTensor(1,model.style_dim).zero_()
                 m = re.search(r'^(\d+|\+|-|\[[^-\+]+\])',expression[idx:])
                 segment=m[0]
                 idx+=len(segment)
@@ -452,9 +487,9 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                         subStyle+=styles[num]
                     style /= len(nums)
                 else:
-                    #if normal:
+                    # if normal:
                     style=styles[segment][0]
-                    #else:
+                    # else:
                     #    style=styles[int(segment)]
                 while idx<len(expression):
                     m = re.search(r'^(\d+|\+|-|\[[^-\+]+\])',expression[idx:])
@@ -477,7 +512,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     elif operation=='-':
                         style+=subStyleS
 
-                #if normal:
+                # if normal:
                 if type(style) is list:
                     if gpu is not None:
                         style = (torch.from_numpy(style[0])[None,...].to(gpu),torch.from_numpy(style[1][None,...]).to(gpu),torch.from_numpy(style[2][None,...]).to(gpu))
@@ -489,14 +524,13 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     else:
                         style = torch.from_numpy(style)
                     style = style[None,...]
-                #else:
+                # else:
                 #    style=style.to(gpu)
 
                 im=generate(model,style.to(gpu), text,char_to_idx, gpu)
                 im = ((1-im[0].permute(1,2,0))*127.5).cpu().numpy().astype(np.uint8)
                 path = os.path.join(saveDir,'result.png')
                 cv2.imwrite(path,im)
-
 
             elif action=='A': #average an authors style vectors together
                 author=input("author? ")
@@ -550,7 +584,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 stylesL=[]
                 textL=[]
                 text_falseL=[]
-                #first build a list of styles
+                # first build a list of styles
                 for i in range(num_inst):
                     if not model.vae:
                         authorA = random.choice(get_authors())
@@ -580,9 +614,9 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 ensure_dir(os.path.join(saveDir))
                 to_write=[]
                 with open(os.path.join(saveDir,'text.csv'),'w') as text_out:
-                    #text.csv is the data for MTurk
+                    # text.csv is the data for MTurk
 
-                    #save the real images, from test set
+                    # save the real images, from test set
                     for i in range(num_inst):
                         index = random.randint(0,len(get_test_data_loader())-1)
                         instance = test_data_loader.dataset[index]
@@ -602,9 +636,9 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                         url = 'http://students.cs.byu.edu/~brianld/images/{}'.format(image_name)
 
                         to_write.append([url,re.sub(r'[^\w\s]','',text),textF,image_name,'real'])
-                    
+
                     random.shuffle(textL)
-                    #save the fake generated images
+                    # save the fake generated images
                     for i,(style, text) in enumerate(zip(stylesL,textL)):
                         if charSpec:
                             if gpu is not None:
@@ -634,9 +668,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     csvwriter.writerow(['image_url','real_text','false_text','image_name','type'])
                     for l in to_write:
                         csvwriter.writerow(l)
-                
 
-                    
             elif action[0]=='f':  #from given image's style to other image's style.
                 if arguments is None:
                     path1 = input("image path 1? ")
@@ -691,9 +723,8 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     for i in range(len(images)):
                         genStep = ((1-images[i][b].permute(1,2,0))*127.5).cpu().numpy().astype(np.uint8)
                         path = os.path.join(saveDir,'gen{}_{}.png'.format(b,i))
-                        #print('wrote: {}'.format(path))
+                        # print('wrote: {}'.format(path))
                         cv2.imwrite(path,genStep)
-
 
             elif action[0]=='u': #Umap images, and image for every style, this was to replicate figure in GANWriting paper, but we didn't end up using it. May not work
                 per_author=3
@@ -767,8 +798,8 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     image2 = instance2['image'].to(gpu)
                     label2 = instance2['label'].to(gpu)
                     a_batch_size = instance1['a_batch_size']
-                    #spaced_label = correct_pred(pred,label)
-                    #spaced_label = onehot(spaced_label,num_char)
+                    # spaced_label = correct_pred(pred,label)
+                    # spaced_label = onehot(spaced_label,num_char)
                     if styles is not None:
                         style1 = styles[author1][0]
                         style2 = styles[author2][0]
@@ -935,8 +966,16 @@ if __name__ == '__main__':
                         help='command to run')
     parser.add_argument('-s', '--style_loc', default=None, type=str,
                         help='location of pkl of styles, generated with get_styles.py')
-
-    args = parser.parse_args()
+    argv = [
+        "-c",
+        "RIME_weights/RIMESLinesslant_noMask_charSpecSingleAppend_GANMedMT_autoAEMoPrcp2tightNewCTCUseGen_balB_hCF0.75_sMG/checkpoint-iteration175000.pth",
+        "-d",
+        "output",
+        "-s",
+        "RIME_weights/RIMESLinesslant_noMask_charSpecSingleAppend_GANMedMT_autoAEMoPrcp2tightNewCTCUseGen_balB_hCF0.75_sMG/test_styles_175000.pkl",
+        
+    ]
+    args = parser.parse_args(argv)
 
     addtoconfig=[]
     if args.addtoconfig is not None:
